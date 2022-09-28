@@ -1,0 +1,9 @@
+.vscode
+
+obj/african_head.obj
+
+main
+main.o
+model.o
+output.tga
+tgaimage.o
