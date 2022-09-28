@@ -5,5 +5,9 @@ obj/african_head.obj
 main
 main.o
 model.o
-output.tga
 tgaimage.o
+
+framebuffer.tga
+output.tga
+scene.tga
+render.tga
