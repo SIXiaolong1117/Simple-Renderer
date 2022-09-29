@@ -18,11 +18,13 @@ int *zbuffer = NULL;
 // 设定宽高深
 const int width = 800;
 const int height = 800;
-const int depth  = 255;
+const int depth = 255;
 // 光照方向
 Vec3f light_dir(0, 0, -1);
 // 摄像机方向
 Vec3f camera(0, 0, 3);
+Vec3f eye(3,3,3);
+Vec3f center(0,0,0);
 
 // 矩阵 to 向量
 Vec3f m2v(Matrix m)
@@ -42,16 +44,17 @@ Matrix v2m(Vec3f v)
 }
 
 // 视口矩阵
-Matrix viewport(int x, int y, int w, int h) {
-    Matrix m = Matrix::identity(4);
-    m[0][3] = x+w/2.f;
-    m[1][3] = y+h/2.f;
-    m[2][3] = depth/2.f;
+Matrix viewport(int x, int y, int w, int h)
+{
+	Matrix m = Matrix::identity(4);
+	m[0][3] = x + w / 2.f;
+	m[1][3] = y + h / 2.f;
+	m[2][3] = depth / 2.f;
 
-    m[0][0] = w/2.f;
-    m[1][1] = h/2.f;
-    m[2][2] = depth/2.f;
-    return m;
+	m[0][0] = w / 2.f;
+	m[1][1] = h / 2.f;
+	m[2][2] = depth / 2.f;
+	return m;
 }
 
 // 画线算法
@@ -149,6 +152,25 @@ void triangle(Vec3i t0, Vec3i t1, Vec3i t2, TGAImage &image, float intensity, in
 	}
 }
 
+// lookat函数
+Matrix lookat(Vec3f eye, Vec3f center, Vec3f up) {
+    Vec3f z = (eye-center).normalize();
+    Vec3f x = (up^z).normalize();
+    Vec3f y = (z^x).normalize();
+    Matrix Minv = Matrix::identity(4);
+    Matrix Tr   = Matrix::identity(4);
+    Matrix ModelView   = Matrix::identity(4);
+    for (int i=0; i<3; i++) {
+        Minv[0][i] = x[i];
+        Minv[1][i] = y[i];
+        Minv[2][i] = z[i];
+        // Tr[i][3] = -eye[i];
+		Tr[i][3] = -center[i];
+    }
+    ModelView = Minv*Tr;
+    return ModelView;
+}
+
 // // 重心坐标
 // Vec3f barycentric(Vec2i *pts, Vec2i P)
 // {
@@ -227,7 +249,7 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		model = new Model("obj/bun_zipper_res4.obj");
+		model = new Model("obj/bun_zipper.obj");
 	}
 
 	zbuffer = new int[width * height];
@@ -235,11 +257,17 @@ int main(int argc, char **argv)
 	{
 		zbuffer[i] = std::numeric_limits<int>::min();
 	}
-
-	{ // draw the model
+	// 渲染对象
+	{
+		// ModelView
+		Matrix ModelView  = lookat(eye, center, Vec3f(0,1,0));
+		// 投影
 		Matrix Projection = Matrix::identity(4);
+		// 计算视口矩阵
 		Matrix ViewPort = viewport(width / 8, height / 8, width * 3 / 4, height * 3 / 4);
-		Projection[3][2] = -1.f / camera.z;
+		// 摄像机投影
+		// Projection[3][2] = -1.f / camera.z;
+		Projection[3][2] = -1.f/(eye-center).norm();
 
 		TGAImage image(width, height, TGAImage::RGB);
 		for (int i = 0; i < model->nfaces(); i++)
@@ -250,7 +278,8 @@ int main(int argc, char **argv)
 			for (int j = 0; j < 3; j++)
 			{
 				Vec3f v = model->vert(face[j]);
-				screen_coords[j] = m2v(ViewPort * Projection * v2m(v));
+				// 视口矩阵 * 摄像机投影 * ModelView * 点矩阵
+				screen_coords[j] = m2v(ViewPort * Projection * ModelView * v2m(v));
 				world_coords[j] = v;
 			}
 			Vec3f n = (world_coords[2] - world_coords[0]) ^ (world_coords[1] - world_coords[0]);
@@ -262,22 +291,22 @@ int main(int argc, char **argv)
 			}
 		}
 
-		image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
+		image.flip_vertically();
 		image.write_tga_file("output.tga");
 	}
-
-	// { // dump z-buffer (debugging purposes only)
-	// 	TGAImage zbimage(width, height, TGAImage::GRAYSCALE);
-	// 	for (int i = 0; i < width; i++)
-	// 	{
-	// 		for (int j = 0; j < height; j++)
-	// 		{
-	// 			zbimage.set(i, j, TGAColor(zbuffer[i + j * width], 1));
-	// 		}
-	// 	}
-	// 	zbimage.flip_vertically(); // i want to have the origin at the left bottom corner of the image
-	// 	zbimage.write_tga_file("zbuffer.tga");
-	// }
+	// 转储zbuffer
+	{
+		TGAImage zbimage(width, height, TGAImage::GRAYSCALE);
+		for (int i = 0; i < width; i++)
+		{
+			for (int j = 0; j < height; j++)
+			{
+				zbimage.set(i, j, TGAColor(zbuffer[i + j * width], 1));
+			}
+		}
+		zbimage.flip_vertically();
+		zbimage.write_tga_file("zbuffer.tga");
+	}
 	delete model;
 	delete[] zbuffer;
 	return 0;
