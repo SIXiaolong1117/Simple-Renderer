@@ -1,15 +1,8 @@
 .vscode
 
-obj/african_head.obj
+obj/african_head
 
 main
-main.o
-model.o
-tgaimage.o
-geometry.o
 
-framebuffer.tga
-output.tga
-scene.tga
-render.tga
-zbuffer.tga
+*.o
+*.tga
