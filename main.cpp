@@ -44,52 +44,52 @@ Vec3f up(0, 1, 0);
 // 	return m;
 // }
 
-struct GouraudShader : public IShader
-{
-	// 由顶点着色器写入，由片段着色器读取
-	Vec3f varying_intensity;
+// struct GouraudShader : public IShader
+// {
+// 	// 由顶点着色器写入，由片段着色器读取
+// 	Vec3f varying_intensity;
 
-	virtual Vec4f vertex(int iface, int nthvert)
-	{
-		// 从.obj文件中读取顶点
-		Vec4f gl_Vertex = embed<4>(model->vert(iface, nthvert));
-		// 将其转换为屏幕坐标
-		gl_Vertex = Viewport * Projection * ModelView * gl_Vertex;
-		// 获得漫反射照明强度
-		varying_intensity[nthvert] = std::max(0.f, model->normal(iface, nthvert) * light_dir);
-		return gl_Vertex;
-	}
+// 	virtual Vec4f vertex(int iface, int nthvert)
+// 	{
+// 		// 从.obj文件中读取顶点
+// 		Vec4f gl_Vertex = embed<4>(model->vert(iface, nthvert));
+// 		// 将其转换为屏幕坐标
+// 		gl_Vertex = Viewport * Projection * ModelView * gl_Vertex;
+// 		// 获得漫反射照明强度
+// 		varying_intensity[nthvert] = std::max(0.f, model->normal(iface, nthvert) * light_dir);
+// 		return gl_Vertex;
+// 	}
 
-	// 普通GouraudShader
-	virtual bool fragment(Vec3f bar, TGAColor &color)
-	{
-		// 对当前像素进行强度插值
-		float intensity = varying_intensity * bar;
-		color = TGAColor(255, 255, 255) * intensity;
-		// 我们不丢弃这个像素
-		return false;
-	}
+// 	// // 普通GouraudShader
+// 	// virtual bool fragment(Vec3f bar, TGAColor &color)
+// 	// {
+// 	// 	// 对当前像素进行强度插值
+// 	// 	float intensity = varying_intensity * bar;
+// 	// 	color = TGAColor(255, 255, 255) * intensity;
+// 	// 	// 我们不丢弃这个像素
+// 	// 	return false;
+// 	// }
 
-	// // 6色阶
-	// virtual bool fragment(Vec3f bar, TGAColor &color)
-	// {
-	// 	float intensity = varying_intensity * bar;
-	// 	if (intensity > .85)
-	// 		intensity = 1;
-	// 	else if (intensity > .60)
-	// 		intensity = .80;
-	// 	else if (intensity > .45)
-	// 		intensity = .60;
-	// 	else if (intensity > .30)
-	// 		intensity = .45;
-	// 	else if (intensity > .15)
-	// 		intensity = .30;
-	// 	else
-	// 		intensity = 0;
-	// 	color = TGAColor(255, 155, 0) * intensity;
-	// 	return false;
-	// }
-};
+// 	// 6色阶
+// 	virtual bool fragment(Vec3f bar, TGAColor &color)
+// 	{
+// 		float intensity = varying_intensity * bar;
+// 		if (intensity > .85)
+// 			intensity = 1;
+// 		else if (intensity > .60)
+// 			intensity = .80;
+// 		else if (intensity > .45)
+// 			intensity = .60;
+// 		else if (intensity > .30)
+// 			intensity = .45;
+// 		else if (intensity > .15)
+// 			intensity = .30;
+// 		else
+// 			intensity = 0;
+// 		color = TGAColor(255, 255, 125) * intensity;
+// 		return false;
+// 	}
+// };
 
 struct Shader : public IShader
 {
@@ -116,12 +116,20 @@ struct Shader : public IShader
 	{
 		// 为当前像素插值uv
 		Vec2f uv = varying_uv * bar;
+		// 法向
 		Vec3f n = proj<3>(uniform_MIT * embed<4>(model->normal(uv))).normalize();
+		// 光向
 		Vec3f l = proj<3>(uniform_M * embed<4>(light_dir)).normalize();
-		// 对当前像素进行强度插值
-		// float intensity = varying_intensity * bar;
-		float intensity = std::max(0.f, n*l);
-		color = model->diffuse(uv) * intensity;
+		// 反射光向
+		Vec3f r = (n * (n * l * 2.f) - l).normalize();
+		float spec = pow(std::max(r.z, 0.0f), model->specular(uv));
+		float diff = std::max(0.f, n * l);
+		TGAColor c = model->diffuse(uv);
+		color = c;
+		for (int i = 0; i < 3; i++)
+		{
+			color[i] = std::min<float>(5 + c[i] * (diff + .6 * spec), 255);
+		}
 		// 我们不丢弃这个像素
 		return false;
 	}
@@ -136,7 +144,7 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		model = new Model("obj/tinyobj/diablo3_pose.obj");
+		model = new Model("obj/tinyobj/african_head.obj");
 	}
 
 	// 初始化矩阵

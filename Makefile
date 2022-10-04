@@ -1,5 +1,5 @@
 SYSCONF_LINK = g++
-CPPFLAGS     = -O3
+CPPFLAGS     = -Wall -Wextra -Weffc++ -pedantic -std=c++98
 LDFLAGS      = -O3
 LIBS         = -lm
 
@@ -20,3 +20,4 @@ clean:
 	-rm -f $(OBJECTS)
 	-rm -f $(TARGET)
 	-rm -f *.tga
+
