@@ -18,12 +18,12 @@ Model *model = NULL;
 // 设定zbuffer
 int *zbuffer = NULL;
 // 设定宽高深
-const int width = 1080;
-const int height = 1080;
+const int width = 400;
+const int height = 400;
 // 光照方向
-Vec3f light_dir(1, 0, 1);
+Vec3f light_dir(1, 1, 1);
 // 摄像机方向
-Vec3f eye(5, 5, 5);
+Vec3f eye(0, 0, 10);
 Vec3f center(0, 0, 0);
 Vec3f up(0, 1, 0);
 
@@ -64,9 +64,38 @@ struct GouraudShader : public IShader
 	{
 		// 对当前像素进行强度插值
 		float intensity = varying_intensity * bar;
-		color = TGAColor(255, 255, 255) * intensity; 
+		color = TGAColor(255, 255, 255) * intensity;
 		// 我们不丢弃这个像素
-		return false;								 
+		return false;
+	}
+};
+
+struct Shader : public IShader
+{
+	// 由顶点着色器写入，由片段着色器读取
+	Vec3f varying_intensity;
+	mat<2, 3, float> varying_uv;
+
+	virtual Vec4f vertex(int iface, int nthvert)
+	{
+		varying_uv.set_col(nthvert, model->uv(iface, nthvert));
+		// 获得漫反射照明强度
+		varying_intensity[nthvert] = std::max(0.f, model->normal(iface, nthvert) * light_dir);
+		// 从.obj文件中读取顶点
+		Vec4f gl_Vertex = embed<4>(model->vert(iface, nthvert));
+		// 将其转换为屏幕坐标
+		return Viewport * Projection * ModelView * gl_Vertex;
+	}
+
+	virtual bool fragment(Vec3f bar, TGAColor &color)
+	{
+		// 对当前像素进行强度插值
+		float intensity = varying_intensity * bar;
+		// 为当前像素插值uv
+		Vec2f uv = varying_uv * bar;
+		color = model->diffuse(uv) * intensity;
+		// 我们不丢弃这个像素
+		return false;
 	}
 };
 
@@ -79,7 +108,7 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		model = new Model("obj/bun_zipper/bun_zipper.obj");
+		model = new Model("obj/tinyobj/diablo3_pose.obj");
 	}
 
 	// 初始化矩阵
@@ -93,7 +122,7 @@ int main(int argc, char **argv)
 	TGAImage image(width, height, TGAImage::RGB);
 	TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
 
-	GouraudShader shader;
+	Shader shader;
 	for (int i = 0; i < model->nfaces(); i++)
 	{
 		Vec4f screen_coords[3];
@@ -104,7 +133,7 @@ int main(int argc, char **argv)
 		triangle(screen_coords, shader, image, zbuffer);
 	}
 
-	image.flip_vertically();
+	image.flip_vertically(); // to place the origin in the bottom left corner of the image
 	zbuffer.flip_vertically();
 	image.write_tga_file("output.tga");
 	zbuffer.write_tga_file("zbuffer.tga");
@@ -112,49 +141,3 @@ int main(int argc, char **argv)
 	delete model;
 	return 0;
 }
-
-// int main(int argc, char **argv)
-// {
-// 	// 导入模型
-// 	if (2 == argc)
-// 	{
-// 		model = new Model(argv[1]);
-// 	}
-// 	else
-// 	{
-// 		model = new Model("obj/bun_zipper.obj");
-// 	}
-// 	// 设定“画板”大小
-// 	TGAImage image(width, height, TGAImage::RGB);
-// 	// 绘制
-// 	// 遍历所有面
-// 	for (int i = 0; i < model->nfaces(); i++)
-// 	{
-// 		std::vector<int> face = model->face(i);
-// 		Vec2i screen_coords[3];
-// 		Vec3f world_coords[3];
-// 		// 遍历，将所有的顶点储存在screen_coords中，同时将三角形边的向量储存在world_coords中
-// 		for (int j = 0; j < 3; j++)
-// 		{
-// 			Vec3f v = model->vert(face[j]);
-// 			screen_coords[j] = Vec2i((v.x + 1.) * width / 2., (v.y + 1.) * height / 2.);
-// 			world_coords[j] = v;
-// 		}
-// 		// 计算每一个三角形的法向量
-// 		Vec3f n = (world_coords[2] - world_coords[0]) ^ (world_coords[1] - world_coords[0]);
-// 		// 归一化法向量
-// 		n.normalize();
-// 		// 计算光线强度
-// 		float intensity = n * light_dir;
-// 		// 如果光线强度大于0
-// 		if (intensity > 0)
-// 		{
-// 			// 依据光线强度，绘制填充三角形
-// 			triangle(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(intensity * 255, intensity * 255, intensity * 255, 255));
-// 		}
-// 	}
-// 	// 原点在图像的左下角
-// 	image.flip_vertically();
-// 	// 设置输出文件名
-// 	image.write_tga_file("output.tga");
-// }

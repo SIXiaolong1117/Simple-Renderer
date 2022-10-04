@@ -1,8 +1,10 @@
 .vscode
 
 obj/african_head
+obj/tifa
+obj/tinyobj
 
 main
 
-*.o
-*.tga
+/*.o
+/*.tga
