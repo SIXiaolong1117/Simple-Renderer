@@ -18,8 +18,8 @@ Model *model = NULL;
 // 设定zbuffer
 int *zbuffer = NULL;
 // 设定宽高深
-const int width = 400;
-const int height = 400;
+const int width = 800;
+const int height = 800;
 // 光照方向
 Vec3f light_dir(1, 1, 1);
 // 摄像机方向
@@ -60,6 +60,7 @@ struct GouraudShader : public IShader
 		return gl_Vertex;
 	}
 
+	// 普通GouraudShader
 	virtual bool fragment(Vec3f bar, TGAColor &color)
 	{
 		// 对当前像素进行强度插值
@@ -68,6 +69,26 @@ struct GouraudShader : public IShader
 		// 我们不丢弃这个像素
 		return false;
 	}
+
+	// // 6色阶
+	// virtual bool fragment(Vec3f bar, TGAColor &color)
+	// {
+	// 	float intensity = varying_intensity * bar;
+	// 	if (intensity > .85)
+	// 		intensity = 1;
+	// 	else if (intensity > .60)
+	// 		intensity = .80;
+	// 	else if (intensity > .45)
+	// 		intensity = .60;
+	// 	else if (intensity > .30)
+	// 		intensity = .45;
+	// 	else if (intensity > .15)
+	// 		intensity = .30;
+	// 	else
+	// 		intensity = 0;
+	// 	color = TGAColor(255, 155, 0) * intensity;
+	// 	return false;
+	// }
 };
 
 struct Shader : public IShader
@@ -75,6 +96,10 @@ struct Shader : public IShader
 	// 由顶点着色器写入，由片段着色器读取
 	Vec3f varying_intensity;
 	mat<2, 3, float> varying_uv;
+	// Projection*ModelView
+	mat<4, 4, float> uniform_M;
+	// (Projection*ModelView).invert_transpose()
+	mat<4, 4, float> uniform_MIT;
 
 	virtual Vec4f vertex(int iface, int nthvert)
 	{
@@ -89,10 +114,13 @@ struct Shader : public IShader
 
 	virtual bool fragment(Vec3f bar, TGAColor &color)
 	{
-		// 对当前像素进行强度插值
-		float intensity = varying_intensity * bar;
 		// 为当前像素插值uv
 		Vec2f uv = varying_uv * bar;
+		Vec3f n = proj<3>(uniform_MIT * embed<4>(model->normal(uv))).normalize();
+		Vec3f l = proj<3>(uniform_M * embed<4>(light_dir)).normalize();
+		// 对当前像素进行强度插值
+		// float intensity = varying_intensity * bar;
+		float intensity = std::max(0.f, n*l);
 		color = model->diffuse(uv) * intensity;
 		// 我们不丢弃这个像素
 		return false;
@@ -123,6 +151,8 @@ int main(int argc, char **argv)
 	TGAImage zbuffer(width, height, TGAImage::GRAYSCALE);
 
 	Shader shader;
+	shader.uniform_M = Projection * ModelView;
+	shader.uniform_MIT = (Projection * ModelView).invert_transpose();
 	for (int i = 0; i < model->nfaces(); i++)
 	{
 		Vec4f screen_coords[3];
@@ -133,7 +163,7 @@ int main(int argc, char **argv)
 		triangle(screen_coords, shader, image, zbuffer);
 	}
 
-	image.flip_vertically(); // to place the origin in the bottom left corner of the image
+	image.flip_vertically();
 	zbuffer.flip_vertically();
 	image.write_tga_file("output.tga");
 	zbuffer.write_tga_file("zbuffer.tga");
