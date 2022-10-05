@@ -183,7 +183,7 @@ Vec3f barycentric(Vec2f A, Vec2f B, Vec2f C, Vec2f P)
 }
 
 // 三角形光栅化（重心坐标）
-void triangle(Vec4f *pts, IShader &shader, TGAImage &image, TGAImage &zbuffer)
+void triangle(Vec4f *pts, IShader &shader, TGAImage &image, float *zbuffer)
 {
     Vec2f bboxmin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
     Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
@@ -211,13 +211,13 @@ void triangle(Vec4f *pts, IShader &shader, TGAImage &image, TGAImage &zbuffer)
             float w = pts[0][3] * c.x + pts[1][3] * c.y + pts[2][3] * c.z;
             int frag_depth = std::max(0, std::min(255, int(z / w + .5)));
             // 是否在边界内
-            if (c.x < 0 || c.y < 0 || c.z < 0 || zbuffer.get(P.x, P.y)[0] > frag_depth)
+            if (c.x < 0 || c.y < 0 || c.z < 0 || zbuffer[P.x + P.y * image.get_width()] > frag_depth)
                 continue;
             bool discard = shader.fragment(c, color);
             if (!discard)
             {
                 // 绘制像素
-                zbuffer.set(P.x, P.y, TGAColor(frag_depth));
+                zbuffer[P.x + P.y * image.get_width()] = frag_depth;
                 image.set(P.x, P.y, color);
             }
         }
