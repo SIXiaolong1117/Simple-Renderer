@@ -1,9 +1,6 @@
 .vscode
 
-obj/african_head
-obj/tifa
-obj/tinyobj
-obj/diablo3_pose
+obj/*
 
 main
 

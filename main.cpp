@@ -104,7 +104,7 @@ int main(int argc, char **argv)
     // 导入模型
     if (2 > argc)
     {
-        std::cerr << "Usage: " << argv[0] << "obj/model.obj" << std::endl;
+        std::cerr << "语法错误，请使用: " << argv[0] << " <.obj path>" << std::endl;
         return 1;
     }
 
