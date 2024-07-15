@@ -2,7 +2,7 @@
 
 [ssloy/tinyrenderer](https://github.com/ssloy/tinyrenderer/wiki)的学习成果，逐步完善中。
 
-学习笔记可以在[这里](https://direct5dom.github.io/categories/TinyRenderer%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/)找到。
+学习笔记可以在[这里](https://SIXiaolong1117.github.io/categories/TinyRenderer%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/)找到。
 
 ## 🤖模型获取
 
@@ -15,7 +15,7 @@
 要构建此项目，您需要：
 
 ```sh
-git clone https://github.com/Direct5dom/Simple-Renderer.git &&
+git clone https://github.com/SIXiaolong1117/Simple-Renderer.git &&
 cd Simple-Renderer &&
 mkdir build &&
 cd build &&
